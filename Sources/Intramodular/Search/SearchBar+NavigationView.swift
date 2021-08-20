@@ -15,9 +15,10 @@ fileprivate struct _NavigationSearchBarConfigurator<SearchResultsContent: View>:
     let searchResultsContent: () -> SearchResultsContent
     
     @Environment(\._hidesNavigationSearchBarWhenScrolling) var hidesSearchBarWhenScrolling: Bool?
+    @Environment(\._hidesNavigationBarDuringPresentation) var hideNavigationBarDuringPresentation: Bool?
+    @Environment(\._automaticallyShowsCancelButton) var automaticallyShowsCancelButton: Bool?
     
     var automaticallyShowSearchBar: Bool? = true
-    var hideNavigationBarDuringPresentation: Bool?
     var obscuresBackgroundDuringPresentation: Bool?
     
     func makeUIViewController(context: Context) -> UIViewControllerType {
@@ -27,7 +28,6 @@ fileprivate struct _NavigationSearchBarConfigurator<SearchResultsContent: View>:
     func updateUIViewController(_ uiViewController: UIViewControllerType, context: Context) {
         context.coordinator.base = self
         context.coordinator.searchBarCoordinator.base = searchBar
-        
         searchBar._updateUISearchBar(context.coordinator.searchController.searchBar, environment: context.environment)
     }
     
@@ -148,6 +148,10 @@ extension _NavigationSearchBarConfigurator {
             if let automaticallyShowSearchBar = base.automaticallyShowSearchBar, automaticallyShowSearchBar {
                 uiViewController.sizeToFitSearchBar()
             }
+            
+            if let automaticallyShowsCancelButton = base.automaticallyShowsCancelButton {
+                searchController.automaticallyShowsCancelButton = automaticallyShowsCancelButton
+            }
         }
         
         // MARK: - UISearchBarDelegate
@@ -237,20 +241,48 @@ extension View {
     public func navigationSearchBarHiddenWhenScrolling(_ hidesSearchBarWhenScrolling: Bool) -> some View {
         environment(\._hidesNavigationSearchBarWhenScrolling, hidesSearchBarWhenScrolling)
     }
+    
+    /// Hides the navigation bar when the search bar is focused
+    public func navigationSearchBarHidesNavigationBarDuringPresentation(_ hidesNavBarDuringPresentation: Bool) -> some View {
+        environment(\._hidesNavigationBarDuringPresentation, hidesNavBarDuringPresentation)
+    }
+    
+    /// Prevents the search bar cancel button from showing automatically if false
+    public func navigationSearchBarAutomaticallyShowsCancelButton(_ automaticallyShowsCancelButton: Bool) -> some View {
+        environment(\._automaticallyShowsCancelButton, automaticallyShowsCancelButton)
+    }
 }
 
 // MARK: - Auxiliary Implementation -
 
 extension EnvironmentValues {
-    final class _HidesNavigationSearchBarWhenScrolling: DefaultEnvironmentKey<Bool> {
-        
-    }
+    final class _HidesNavigationSearchBarWhenScrolling: DefaultEnvironmentKey<Bool> {}
     
     var _hidesNavigationSearchBarWhenScrolling: Bool? {
         get {
             self[_HidesNavigationSearchBarWhenScrolling.self]
         } set {
             self[_HidesNavigationSearchBarWhenScrolling.self] = newValue
+        }
+    }
+    
+    final class _HidesNavigationBarDuringPresentation: DefaultEnvironmentKey<Bool> {}
+    
+    var _hidesNavigationBarDuringPresentation: Bool? {
+        get {
+            self[_HidesNavigationBarDuringPresentation.self]
+        } set {
+            self[_HidesNavigationBarDuringPresentation.self] = newValue
+        }
+    }
+    
+    final class _AutomaticallyShowsCancelButton: DefaultEnvironmentKey<Bool> {}
+    
+    var _automaticallyShowsCancelButton: Bool? {
+        get {
+            self[_AutomaticallyShowsCancelButton.self]
+        } set {
+            self[_AutomaticallyShowsCancelButton.self] = newValue
         }
     }
 }
