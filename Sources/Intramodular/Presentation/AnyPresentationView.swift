@@ -14,9 +14,9 @@ public struct AnyPresentationView: View {
         #endif
     }
     
-    let base: Base
+    var base: Base
     
-    var environmentBuilder: EnvironmentBuilder = .init()
+    var environmentInsertions: EnvironmentInsertions = .init()
     
     public private(set) var name: AnyHashable?
     public private(set) var id: AnyHashable?
@@ -30,13 +30,13 @@ public struct AnyPresentationView: View {
             switch base {
                 case .native(let view):
                     view
-                        .mergeEnvironmentBuilder(environmentBuilder)
-                        .modifier(_ResolveAppKitOrUIKitViewController())
+                        .environment(environmentInsertions)
+                        ._resolveAppKitOrUIKitViewControllerIfAvailable()
                 #if !os(watchOS)
                 case .appKitOrUIKitViewController(let viewController):
                     AppKitOrUIKitViewControllerAdaptor(viewController)
-                        .mergeEnvironmentBuilder(environmentBuilder)
-                        .modifier(_ResolveAppKitOrUIKitViewController(viewController))
+                        .environment(environmentInsertions)
+                        ._resolveAppKitOrUIKitViewController(with: viewController)
                 #endif
             }
         }
@@ -53,6 +53,12 @@ public struct AnyPresentationView: View {
     #if !os(watchOS)
     public init(_ viewController: AppKitOrUIKitViewController) {
         self.base = .appKitOrUIKitViewController(viewController)
+
+        #if os(iOS)
+        if let transitioningDelegate = viewController.transitioningDelegate {
+            self = self.modalPresentationStyle(.custom(transitioningDelegate))
+        }
+        #endif
     }
     #endif
 }
@@ -90,11 +96,11 @@ extension AnyPresentationView {
 }
 
 extension AnyPresentationView {
-    public func mergeEnvironmentBuilder(_ builder: EnvironmentBuilder) -> Self {
-        then({ $0.environmentBuilder.merge(builder) })
+    public func environment(_ builder: EnvironmentInsertions) -> Self {
+        then({ $0.environmentInsertions.merge(builder) })
     }
     
-    public mutating func mergeEnvironmentBuilderInPlace(_ builder: EnvironmentBuilder) {
-        self = mergeEnvironmentBuilder(builder)
+    public mutating func environmentInPlace(_ builder: EnvironmentInsertions) {
+        self = environment(builder)
     }
 }

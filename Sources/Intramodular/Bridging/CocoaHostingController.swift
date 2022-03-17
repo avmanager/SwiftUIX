@@ -29,6 +29,8 @@ open class CocoaHostingController<Content: View>: AppKitOrUIKitHostingController
         }
     }
     
+    public var shouldResizeToFitContent: Bool = false
+    
     override public var presentationCoordinator: CocoaPresentationCoordinator {
         _presentationCoordinator
     }
@@ -94,13 +96,29 @@ open class CocoaHostingController<Content: View>: AppKitOrUIKitHostingController
     override open func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         
+        if shouldResizeToFitContent {
+            view.invalidateIntrinsicContentSize()
+        }
+        
         DispatchQueue.main.async {
             self.resizeParentWindowIfNecessary()
         }
     }
     
+    override open func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        
+        if shouldResizeToFitContent {
+            view.invalidateIntrinsicContentSize()
+        }
+    }
+    
     override open func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         super.viewWillTransition(to: size, with: coordinator)
+        
+        if shouldResizeToFitContent {
+            view.invalidateIntrinsicContentSize()
+        }
     }
     
     #elseif os(macOS)
@@ -149,8 +167,6 @@ open class CocoaHostingController<Content: View>: AppKitOrUIKitHostingController
         
         #if os(iOS)
         if let window = view.window, window.canResizeToFitContent, view.frame.size.isAreaZero || view.frame.size == Screen.size {
-            _fixSafeAreaInsets()
-            
             window.frame.size = self.sizeThatFits(AppKitOrUIKitLayoutSizeProposal(targetSize: Screen.main.bounds.size))
             
             _didResizeParentWindowOnce = true
@@ -161,9 +177,9 @@ open class CocoaHostingController<Content: View>: AppKitOrUIKitHostingController
 
 extension AppKitOrUIKitHostingController {
     /// https://twitter.com/b3ll/status/1193747288302075906
-    func _fixSafeAreaInsets() {
+    public func _fixSafeAreaInsets() {
         #if os(iOS) || os(tvOS) || targetEnvironment(macCatalyst)
-        guard let viewClass = object_getClass(view) else {
+        guard let viewClass = object_getClass(view), !String(cString: class_getName(viewClass)).hasSuffix("_SwiftUIX_patched") else {
             return
         }
 
@@ -196,7 +212,7 @@ extension AppKitOrUIKitHostingController {
                 objc_registerClassPair(subclass)
                 object_setClass(view, subclass)
             }
-            
+
             view.setNeedsDisplay()
             view.setNeedsLayout()
             view.layoutIfNeeded()
